@@ -1,7 +1,7 @@
 <div align="center">
   <h1>NooviChat — Resources</h1>
 
-  <p><strong>Fork brasileiro do Chatwoot</strong> com Pipeline CRM, Captain AI e WhatsApp via WAHA.<br />
+  <p><strong>Fork brasileiro do Chatwoot</strong> com Pipeline CRM nativo, Noovi Labs FlowBuilder e WhatsApp via WAHA.<br />
   Este repositório concentra docs, exemplos, integrações e tutoriais para a comunidade.</p>
 
   <p>
@@ -23,18 +23,26 @@
 
 ## O que é o NooviChat?
 
-NooviChat é a **versão brasileira comercial do Chatwoot** que adiciona:
+NooviChat é a **versão brasileira comercial do Chatwoot** que adiciona
+sobre a base upstream open-source:
 
 - **Pipeline CRM em kanban** (Pipeline Pro) — não existe no Chatwoot upstream
-- **Captain AI** com modelos generativos avançados + RAG via pgvector
-- **WAHA Plus** integrado (WhatsApp não-oficial multi-device)
-- **Templates avançados** de WhatsApp Business (componentes, parâmetros nomeados)
-- **Lead scoring** automático com regras customizáveis
-- **Follow-ups** inteligentes baseados em SLA e comportamento
-- **Broadcasts** em massa com anti-block (spintax, rotação de inbox)
-- **Appointments** com Google Calendar sync
-- **Internal Chat** entre agentes da mesma conta
 - **Noovi Labs / FlowBuilder** — automações visuais drag-and-drop
+- **Broadcasts** em massa com anti-block (spintax, rotação de inbox)
+- **Follow-Ups** automáticos por SLA e comportamento
+- **Lead Scoring** com regras customizáveis
+- **Appointments / Bookings** com Google Calendar sync
+- **Internal Chat** entre agentes da mesma conta
+- **Companies (B2B)** com hierarquia de contatos
+- **WAHA Plus** integrado (WhatsApp não-oficial multi-device)
+- **UAZAPI** como provedor alternativo de WhatsApp
+- **Templates avançados** de WhatsApp Business (componentes, parâmetros nomeados, botões URL)
+- **Auto-instalador** via curl
+- **Localização e suporte** 100% em português brasileiro
+
+> Nota: Captain AI, inbox unificado, SLA policies, canned responses,
+> macros, bulk actions, teams e agentes são features **nativas do
+> Chatwoot upstream**, herdadas no NooviChat.
 
 ## Por que esse repo?
 
@@ -60,20 +68,30 @@ NooviChat são abertos.
 
 ## Comparativo rápido — Chatwoot vs NooviChat
 
-| Feature | Chatwoot upstream | NooviChat |
+Tabela de **features adicionais do NooviChat sobre o Chatwoot upstream**:
+
+| Feature adicional | Chatwoot upstream | NooviChat |
 |---|---|---|
 | Pipeline CRM (kanban) | ❌ | ✅ Pipeline Pro |
+| FlowBuilder visual | ❌ | ✅ Noovi Labs |
 | WhatsApp via WAHA | ❌ | ✅ Plus incluído |
-| Captain AI com modelo generativo avançado | Limitado | ✅ Full + RAG |
-| Lead scoring | ❌ | ✅ |
-| Follow-ups automáticos | ❌ | ✅ |
+| WhatsApp via UAZAPI | ❌ | ✅ |
+| Templates WhatsApp avançados (UI) | Básico | ✅ Componentes + parâmetros nomeados |
+| Lead scoring automático | ❌ | ✅ |
+| Follow-Ups automáticos | ❌ | ✅ |
 | Broadcasts anti-block | ❌ | ✅ |
 | Appointments + Google Calendar | ❌ | ✅ |
+| Internal Chat entre agentes | ❌ | ✅ |
+| Companies (B2B) | ❌ | ✅ |
 | Auto-instalador via curl | ❌ | ✅ |
 | Suporte 100% PT-BR | ❌ | ✅ |
-| FlowBuilder visual | ❌ | ✅ Noovi Labs |
 | n8n community node oficial | ❌ | ✅ `@nooviai/n8n-nodes-noovichat` |
-| MCP server (Model Context Protocol) | ❌ | ✅ `@nooviai/noovichat-mcp` |
+| MCP server | ❌ | ✅ `@nooviai/noovichat-mcp` |
+
+Features herdadas do upstream (presentes em ambos): inbox unificado
+multicanal, Captain AI (assistant + copilot), conversation routing, SLA
+policies, canned responses, macros, bulk actions, teams, agents,
+custom attributes, WhatsApp Cloud API base, email channel, web widget.
 
 [Ver comparativo completo →](https://noovichat.com/comparativo/chatwoot)
 

@@ -7,16 +7,18 @@ Permite usar NooviChat diretamente em qualquer aplicação compatível com MCP
 via transport stdio. ~138 tools disponíveis cobrindo todas as áreas
 funcionais do produto:
 
-- Pipeline Pro (cards, stages, automations, sequences)
-- Follow-Ups
-- Atendimentos / Conversations
-- Broadcasts
-- WhatsApp Templates
-- WAHA / UAZAPI integration
-- Lead Scoring
-- Companies (B2B)
-- Internal Chat
-- Captain AI
+- Pipeline Pro (cards, stages, automations, sequences) — custom NooviChat
+- Noovi Labs / FlowBuilder — custom NooviChat
+- Follow-Ups — custom NooviChat
+- Broadcasts — custom NooviChat
+- Lead Scoring — custom NooviChat
+- Companies (B2B) — custom NooviChat
+- Appointments — custom NooviChat
+- Internal Chat — custom NooviChat
+- WhatsApp Templates avançados — custom NooviChat
+- WAHA / UAZAPI integration — custom NooviChat
+- Atendimentos / Conversations (upstream Chatwoot)
+- Captain AI hooks (Captain é upstream; expomos via tools de integração)
 
 ## O que é MCP
 
@@ -133,7 +135,7 @@ Resumo por categoria:
 - `internal_chats_list`, `internal_chats_create_dm`, `internal_chats_create_group`
 - `internal_chat_messages_*`, `internal_chats_add_members`, `internal_chats_remove_member`
 
-### Captain AI
+### Captain AI (upstream Chatwoot — expostos via MCP)
 - `captain_assistants_*`, `captain_documents_*`, `captain_tasks_*`
 
 ## Exemplos de uso

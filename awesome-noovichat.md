@@ -51,10 +51,6 @@
 - [WAHA vs WhatsApp Cloud API: qual escolher](docs/tutorials/waha-vs-cloud-api.md) *(em breve)*
 - [Templates HSM avançados](docs/features/whatsapp-templates.md) *(em breve)*
 
-### Captain AI
-
-- [Configurando Captain AI](docs/features/captain-ai.md) *(em breve)*
-
 ### Migrações
 
 - [Migrando do Chatwoot oficial pro NooviChat](docs/tutorials/migrar-do-chatwoot.md) *(em breve)*

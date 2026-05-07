@@ -154,7 +154,6 @@ caServer: https://acme-staging-v02.api.letsencrypt.org/directory
 
 - [Configurar Pipeline Pro](tutorials/pipeline-setup-completo.md)
 - [Conectar WhatsApp via WAHA](tutorials/waha-integration.md)
-- [Configurar Captain AI](features/captain-ai.md)
 - [Integrar com n8n](integrations/n8n.md)
 - [Backup automatizado](tutorials/backup-restore.md)
 
