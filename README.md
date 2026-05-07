@@ -28,6 +28,7 @@ sobre a base upstream open-source:
 
 - **Pipeline CRM em kanban** (Pipeline Pro) — não existe no Chatwoot upstream
 - **Noovi Labs / FlowBuilder** — automações visuais drag-and-drop
+- **WhiteLabel completo no Super Admin** — revenda do produto com sua própria marca
 - **Broadcasts** em massa com anti-block (spintax, rotação de inbox)
 - **Follow-Ups** automáticos por SLA e comportamento
 - **Lead Scoring** com regras customizáveis
@@ -74,6 +75,7 @@ Tabela de **features adicionais do NooviChat sobre o Chatwoot upstream**:
 |---|---|---|
 | Pipeline CRM (kanban) | ❌ | ✅ Pipeline Pro |
 | FlowBuilder visual | ❌ | ✅ Noovi Labs |
+| WhiteLabel completo (Super Admin) | ❌ | ✅ |
 | WhatsApp via WAHA | ❌ | ✅ Plus incluído |
 | WhatsApp via UAZAPI | ❌ | ✅ |
 | Templates WhatsApp avançados (UI) | Básico | ✅ Componentes + parâmetros nomeados |
