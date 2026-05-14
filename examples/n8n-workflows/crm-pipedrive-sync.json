@@ -1,0 +1,138 @@
+{
+  "name": "NooviChat → Pipedrive — Sync bidirecional de deals",
+  "description": "Sincroniza deals entre NooviChat Pipeline Pro e Pipedrive. Quando um card muda de estágio no NooviChat, atualiza automaticamente o deal no Pipedrive.",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Webhook — Pipeline card atualizado",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "noovichat-pipeline-sync",
+        "responseMode": "onReceived"
+      },
+      "position": [0, 200]
+    },
+    {
+      "id": "filter-stage-changed",
+      "name": "Filtrar — apenas mudança de estágio",
+      "type": "n8n-nodes-base.filter",
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "value1": "={{ $json.event }}",
+              "operation": "equal",
+              "value2": "pipeline_card.stage_changed"
+            }
+          ]
+        }
+      },
+      "position": [200, 200]
+    },
+    {
+      "id": "stage-mapping",
+      "name": "Stage Mapping NooviChat → Pipedrive",
+      "type": "n8n-nodes-base.set",
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "pipedrive_stage_id",
+              "value": "={{ {'Prospect': '1', 'Qualificado': '2', 'Proposta Enviada': '3', 'Negociação': '4', 'Fechado — Ganho': '5', 'Fechado — Perdido': '6'}[$json.data.to_stage] || '1' }}"
+            }
+          ]
+        }
+      },
+      "position": [400, 200]
+    },
+    {
+      "id": "pipedrive-search-deal",
+      "name": "Pipedrive — Buscar deal existente",
+      "type": "n8n-nodes-base.pipedrive",
+      "parameters": {
+        "resource": "deal",
+        "operation": "search",
+        "term": "={{ $json.data.card_id }}",
+        "fields": "custom_fields"
+      },
+      "position": [600, 200]
+    },
+    {
+      "id": "if-deal-exists",
+      "name": "Deal já existe no Pipedrive?",
+      "type": "n8n-nodes-base.if",
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "value1": "={{ $json.data?.length > 0 }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "position": [800, 200]
+    },
+    {
+      "id": "pipedrive-update-deal",
+      "name": "Pipedrive — Atualizar deal (estágio)",
+      "type": "n8n-nodes-base.pipedrive",
+      "parameters": {
+        "resource": "deal",
+        "operation": "update",
+        "dealId": "={{ $json.data[0].item.id }}",
+        "updateFields": {
+          "stage_id": "={{ $('Stage Mapping NooviChat → Pipedrive').item.json.pipedrive_stage_id }}"
+        }
+      },
+      "position": [1000, 100]
+    },
+    {
+      "id": "noovichat-get-contact",
+      "name": "NooviChat — Buscar contato do card",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "resource": "contact",
+        "operation": "get",
+        "contactId": "={{ $('Filtrar — apenas mudança de estágio').item.json.data.contact_id }}"
+      },
+      "position": [1000, 300]
+    },
+    {
+      "id": "pipedrive-create-deal",
+      "name": "Pipedrive — Criar novo deal",
+      "type": "n8n-nodes-base.pipedrive",
+      "parameters": {
+        "resource": "deal",
+        "operation": "create",
+        "title": "={{ $json.name }} — NooviChat #{{ $('Filtrar — apenas mudança de estágio').item.json.data.card_id }}",
+        "stageId": "={{ $('Stage Mapping NooviChat → Pipedrive').item.json.pipedrive_stage_id }}",
+        "additionalFields": {
+          "person_name": "={{ $json.name }}",
+          "org_name": "={{ $json.company }}"
+        }
+      },
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "Webhook — Pipeline card atualizado": { "main": [[ {"node": "Filtrar — apenas mudança de estágio", "type": "main", "index": 0} ]] },
+    "Filtrar — apenas mudança de estágio": { "main": [[ {"node": "Stage Mapping NooviChat → Pipedrive", "type": "main", "index": 0} ]] },
+    "Stage Mapping NooviChat → Pipedrive": { "main": [[ {"node": "Pipedrive — Buscar deal existente", "type": "main", "index": 0} ]] },
+    "Pipedrive — Buscar deal existente": { "main": [[ {"node": "Deal já existe no Pipedrive?", "type": "main", "index": 0} ]] },
+    "Deal já existe no Pipedrive?": {
+      "main": [
+        [ {"node": "Pipedrive — Atualizar deal (estágio)", "type": "main", "index": 0} ],
+        [ {"node": "NooviChat — Buscar contato do card", "type": "main", "index": 0} ]
+      ]
+    },
+    "NooviChat — Buscar contato do card": { "main": [[ {"node": "Pipedrive — Criar novo deal", "type": "main", "index": 0} ]] }
+  },
+  "_meta": {
+    "author": "NooviChat",
+    "version": "1.0",
+    "setup": "Edite o nó 'Stage Mapping' para mapear seus estágios NooviChat com os IDs de stage do Pipedrive",
+    "docs": "https://github.com/Noovi-AI/noovichat-resources/blob/main/docs/integrations/pipedrive-sync.md"
+  }
+}

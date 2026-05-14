@@ -1,0 +1,118 @@
+# NooviChat — Docker Swarm com alta disponibilidade
+# Para: produção com múltiplas réplicas, load balancing e zero-downtime deploys
+#
+# Requisitos:
+#   - Docker Swarm inicializado: docker swarm init
+#   - PostgreSQL externo (RDS, Supabase, ou servidor dedicado)
+#   - Redis externo (ElastiCache ou Redis dedicado)
+#   - Traefik como load balancer (ou Nginx com upstream)
+#
+# Deploy:
+#   docker stack deploy -c high-availability.yml noovichat
+
+version: "3.8"
+
+services:
+  noovichat:
+    image: nooviai/noovichat:latest
+    env_file: .env
+    environment:
+      RAILS_ENV: production
+      # PostgreSQL externo — configurar no .env
+      # DATABASE_URL: postgresql://user:pass@postgres-host:5432/noovichat_production
+    volumes:
+      - uploads:/app/storage
+    networks: [noovichat-net, traefik-public]
+    deploy:
+      replicas: 2
+      update_config:
+        order: start-first        # Zero-downtime: sobe nova réplica antes de parar antiga
+        failure_action: rollback
+        parallelism: 1
+        delay: 10s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.noovichat.rule=Host(`chat.suaempresa.com.br`)"
+        - "traefik.http.routers.noovichat.tls=true"
+        - "traefik.http.routers.noovichat.tls.certresolver=letsencrypt"
+        - "traefik.http.services.noovichat.loadbalancer.server.port=3000"
+        - "traefik.http.services.noovichat.loadbalancer.sticky.cookie=true"
+
+  sidekiq:
+    image: nooviai/noovichat:latest
+    command: bundle exec sidekiq -C config/sidekiq.yml -c 10
+    env_file: .env
+    environment:
+      RAILS_ENV: production
+    networks: [noovichat-net]
+    deploy:
+      replicas: 2
+      update_config:
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+
+  waha:
+    image: devlikeapro/waha-plus:latest
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: WEBJS
+      WHATSAPP_HOOK_URL: http://noovichat:3000/webhooks/waha
+      WHATSAPP_HOOK_EVENTS: message,message.any,session.status
+    volumes:
+      - waha-sessions:/app/.sessions
+    networks: [noovichat-net]
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == worker]    # WAHA precisa de sessão persistente — 1 réplica fixa
+      restart_policy:
+        condition: on-failure
+
+  traefik:
+    image: traefik:v3
+    command:
+      - --providers.docker.swarmMode=true
+      - --providers.docker.exposedByDefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme/acme.json
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme-data:/acme
+    networks: [traefik-public]
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+
+networks:
+  noovichat-net:
+    driver: overlay
+    attachable: true
+  traefik-public:
+    driver: overlay
+    external: true
+
+volumes:
+  uploads:
+    driver: local
+    driver_opts:
+      type: nfs          # NFS compartilhado entre réplicas — ajuste para seu storage
+      o: addr=nfs-server,rw
+      device: ":/mnt/noovichat/uploads"
+  waha-sessions:
+  acme-data:

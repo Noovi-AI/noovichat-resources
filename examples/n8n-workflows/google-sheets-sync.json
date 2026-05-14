@@ -1,0 +1,98 @@
+{
+  "name": "NooviChat — Sync conversas resolvidas → Google Sheets",
+  "description": "Registra automaticamente cada conversa resolvida em uma planilha Google Sheets para relatórios de atendimento.",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Webhook — Conversa resolvida",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "noovichat-conversation-resolved",
+        "responseMode": "onReceived"
+      },
+      "position": [0, 200]
+    },
+    {
+      "id": "filter-resolved",
+      "name": "Filtrar — apenas status resolved",
+      "type": "n8n-nodes-base.filter",
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "value1": "={{ $json.event }}",
+              "operation": "equal",
+              "value2": "conversation.status_changed"
+            },
+            {
+              "value1": "={{ $json.data.status }}",
+              "operation": "equal",
+              "value2": "resolved"
+            }
+          ]
+        }
+      },
+      "position": [200, 200]
+    },
+    {
+      "id": "calculate-duration",
+      "name": "Calcular duração e campos",
+      "type": "n8n-nodes-base.set",
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "data", "value": "={{ $now.setZone('America/Sao_Paulo').toFormat('dd/MM/yyyy') }}" },
+            { "name": "hora", "value": "={{ $now.setZone('America/Sao_Paulo').toFormat('HH:mm') }}" },
+            { "name": "id_conversa", "value": "={{ $json.data.id }}" },
+            { "name": "contato", "value": "={{ $json.data.meta.sender.name }}" },
+            { "name": "telefone", "value": "={{ $json.data.meta.sender.phone_number }}" },
+            { "name": "agente", "value": "={{ $json.data.meta.assignee?.name || 'Não atribuído' }}" },
+            { "name": "inbox", "value": "={{ $json.data.inbox_id }}" },
+            { "name": "labels", "value": "={{ $json.data.labels.join(', ') }}" },
+            { "name": "url_conversa", "value": "={{ $env.NOOVICHAT_URL }}/app/accounts/{{ $json.data.account_id }}/conversations/{{ $json.data.id }}" }
+          ]
+        }
+      },
+      "position": [400, 200]
+    },
+    {
+      "id": "google-sheets-append",
+      "name": "Google Sheets — Adicionar linha",
+      "type": "n8n-nodes-base.googleSheets",
+      "parameters": {
+        "operation": "append",
+        "sheetId": "={{ $env.GOOGLE_SHEET_ID }}",
+        "range": "Conversas!A:I",
+        "valueInputMode": "RAW",
+        "values": {
+          "values": [
+            [
+              "={{ $json.data }}",
+              "={{ $json.hora }}",
+              "={{ $json.id_conversa }}",
+              "={{ $json.contato }}",
+              "={{ $json.telefone }}",
+              "={{ $json.agente }}",
+              "={{ $json.inbox }}",
+              "={{ $json.labels }}",
+              "={{ $json.url_conversa }}"
+            ]
+          ]
+        }
+      },
+      "position": [600, 200]
+    }
+  ],
+  "connections": {
+    "Webhook — Conversa resolvida": { "main": [[ {"node": "Filtrar — apenas status resolved", "type": "main", "index": 0} ]] },
+    "Filtrar — apenas status resolved": { "main": [[ {"node": "Calcular duração e campos", "type": "main", "index": 0} ]] },
+    "Calcular duração e campos": { "main": [[ {"node": "Google Sheets — Adicionar linha", "type": "main", "index": 0} ]] }
+  },
+  "_meta": {
+    "author": "NooviChat",
+    "version": "1.0",
+    "env_required": ["NOOVICHAT_URL", "GOOGLE_SHEET_ID"],
+    "sheet_headers": ["Data", "Hora", "ID Conversa", "Contato", "Telefone", "Agente", "Inbox", "Labels", "URL"],
+    "docs": "https://github.com/Noovi-AI/noovichat-resources/blob/main/docs/tutorials/automacoes-n8n-essenciais.md"
+  }
+}

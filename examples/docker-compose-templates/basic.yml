@@ -1,0 +1,99 @@
+# NooviChat — Docker Compose básico (1 VPS, sem monitoramento)
+# Para: instalações de desenvolvimento ou produção pequena (<500 conversas/mês)
+#
+# Uso:
+#   cp basic.yml docker-compose.yml
+#   cp .env.example .env && nano .env   # configure as variáveis
+#   docker compose up -d
+#
+# Pré-requisito: Nginx e SSL configurados no host (auto-instalador faz isso)
+
+version: "3.8"
+
+services:
+  noovichat:
+    image: nooviai/noovichat:latest
+    depends_on:
+      - postgres
+      - redis
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - RAILS_ENV=production
+    volumes:
+      - uploads:/app/storage
+      - logs:/app/log
+    networks:
+      - noovichat-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/auth/sign_in"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  sidekiq:
+    image: nooviai/noovichat:latest
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    depends_on:
+      - noovichat
+      - postgres
+      - redis
+    env_file: .env
+    environment:
+      - RAILS_ENV=production
+    networks:
+      - noovichat-net
+    restart: unless-stopped
+
+  postgres:
+    image: ankane/pgvector:v0.7.0   # PostgreSQL 16 + pgvector
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-noovichat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: noovichat_production
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - noovichat-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-noovichat}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - noovichat-net
+    restart: unless-stopped
+
+  waha:
+    image: devlikeapro/waha-plus:latest
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: WEBJS
+      WHATSAPP_HOOK_URL: http://noovichat:3000/webhooks/waha
+      WHATSAPP_HOOK_EVENTS: message,message.any,session.status,session.created
+      WAHA_DASHBOARD_ENABLED: "true"
+      WAHA_DASHBOARD_USERNAME: ${WAHA_DASHBOARD_USERNAME:-admin}
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD}
+    volumes:
+      - waha-sessions:/app/.sessions
+    networks:
+      - noovichat-net
+    restart: unless-stopped
+
+networks:
+  noovichat-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  uploads:
+  logs:
+  waha-sessions:

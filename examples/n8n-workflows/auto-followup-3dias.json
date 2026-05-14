@@ -1,0 +1,91 @@
+{
+  "name": "NooviChat — Follow-up automático 3 dias",
+  "description": "Envia follow-up para contatos que não responderam em 3 dias. Roda diariamente às 8h via Cron.",
+  "nodes": [
+    {
+      "id": "cron-trigger",
+      "name": "Cron — Todo dia 8h",
+      "type": "n8n-nodes-base.cron",
+      "parameters": {
+        "triggerTimes": {
+          "item": [{ "mode": "everyDay", "hour": 8, "minute": 0 }]
+        }
+      },
+      "position": [0, 200]
+    },
+    {
+      "id": "noovichat-list-conversations",
+      "name": "NooviChat — Listar conversas sem resposta",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "operation": "getAll",
+        "resource": "conversation",
+        "filters": {
+          "status": "open",
+          "assignee_type": "assigned",
+          "last_activity_before": "={{ $now.minus({ days: 3 }).toISO() }}"
+        }
+      },
+      "position": [200, 200]
+    },
+    {
+      "id": "filter-no-followup",
+      "name": "Filtrar — sem label follow-up-enviado",
+      "type": "n8n-nodes-base.filter",
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "value1": "={{ $json.labels.includes('follow-up-enviado') }}",
+              "operation": "equal",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "position": [400, 200]
+    },
+    {
+      "id": "noovichat-send-followup",
+      "name": "NooviChat — Enviar follow-up",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "operation": "create",
+        "resource": "message",
+        "conversationId": "={{ $json.id }}",
+        "content": "Oi {{ $json.meta.sender.name.split(' ')[0] }}, tudo bem? 👋\n\nPercebemos que ficamos sem retorno. Ainda posso te ajudar?\n\nFico à disposição! 😊"
+      },
+      "position": [600, 200]
+    },
+    {
+      "id": "noovichat-add-label",
+      "name": "NooviChat — Adicionar label follow-up-enviado",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "operation": "addLabel",
+        "resource": "conversation",
+        "conversationId": "={{ $json.conversation_id }}",
+        "label": "follow-up-enviado"
+      },
+      "position": [800, 200]
+    }
+  ],
+  "connections": {
+    "Cron — Todo dia 8h": { "main": [[ {"node": "NooviChat — Listar conversas sem resposta", "type": "main", "index": 0} ]] },
+    "NooviChat — Listar conversas sem resposta": { "main": [[ {"node": "Filtrar — sem label follow-up-enviado", "type": "main", "index": 0} ]] },
+    "Filtrar — sem label follow-up-enviado": { "main": [[ {"node": "NooviChat — Enviar follow-up", "type": "main", "index": 0} ]] },
+    "NooviChat — Enviar follow-up": { "main": [[ {"node": "NooviChat — Adicionar label follow-up-enviado", "type": "main", "index": 0} ]] }
+  },
+  "settings": {
+    "timezone": "America/Sao_Paulo"
+  },
+  "_meta": {
+    "author": "NooviChat",
+    "version": "1.0",
+    "noovichat_nodes": "@nooviai/n8n-nodes-noovichat@latest",
+    "docs": "https://github.com/Noovi-AI/noovichat-resources/blob/main/docs/tutorials/automacoes-n8n-essenciais.md"
+  }
+}

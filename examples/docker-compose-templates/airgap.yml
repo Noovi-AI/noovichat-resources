@@ -1,0 +1,111 @@
+# NooviChat — Docker Compose airgap (sem acesso à internet)
+# Para: ambientes corporativos isolados, intranets, compliance que proíbe tráfego externo
+#
+# Diferenças do basic.yml:
+#   - Todas as imagens são pré-carregadas (pull offline)
+#   - Captain AI desabilitado (requer OpenAI API)
+#   - WAHA com engine NOWEB (Baileys — sem Chrome, mais leve)
+#   - Sem Let's Encrypt — use certificado interno da empresa
+#   - Sem telemetria e sem callbacks externos
+#
+# Setup airgap:
+#   1. Em máquina com internet: docker pull + docker save + copiar para o servidor
+#   2. No servidor airgap: docker load < noovichat-images.tar
+#   3. docker compose -f airgap.yml up -d
+
+version: "3.8"
+
+services:
+  noovichat:
+    image: nooviai/noovichat:latest
+    depends_on: [postgres, redis]
+    env_file: .env
+    environment:
+      RAILS_ENV: production
+      # Desabilitar integrações externas
+      CAPTAIN_AI_ENABLED: "false"
+      TELEMETRY_ENABLED: "false"
+      # SSL interno — aponte para seu certificado
+      FORCE_SSL: "true"
+    volumes:
+      - uploads:/app/storage
+      - logs:/app/log
+      - ./ssl:/ssl:ro    # Montar certificados SSL internos
+    networks: [noovichat-net]
+    restart: unless-stopped
+
+  sidekiq:
+    image: nooviai/noovichat:latest
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    depends_on: [noovichat, postgres, redis]
+    env_file: .env
+    environment:
+      RAILS_ENV: production
+    networks: [noovichat-net]
+    restart: unless-stopped
+
+  postgres:
+    image: ankane/pgvector:v0.7.0
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-noovichat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: noovichat_production
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [noovichat-net]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --bind 127.0.0.1
+    volumes: [redis-data:/data]
+    networks: [noovichat-net]
+    restart: unless-stopped
+
+  waha:
+    image: devlikeapro/waha-plus:latest
+    environment:
+      # NOWEB: Baileys (Node.js puro) — sem Chrome, funciona em airgap
+      WHATSAPP_DEFAULT_ENGINE: NOWEB
+      WHATSAPP_HOOK_URL: http://noovichat:3000/webhooks/waha
+      WHATSAPP_HOOK_EVENTS: message,message.any,session.status
+      # Desabilitar atualizações automáticas
+      WAHA_AUTO_UPDATE: "false"
+    volumes: [waha-sessions:/app/.sessions]
+    networks: [noovichat-net]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/airgap.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on: [noovichat]
+    networks: [noovichat-net]
+    restart: unless-stopped
+
+networks:
+  noovichat-net:
+    driver: bridge
+    internal: true    # Rede interna sem acesso à internet
+
+volumes:
+  postgres-data:
+  redis-data:
+  uploads:
+  logs:
+  waha-sessions:
+
+# ----
+# Para pre-carregar imagens offline:
+#
+# Em máquina COM internet:
+#   docker pull nooviai/noovichat:latest ankane/pgvector:v0.7.0 redis:7-alpine devlikeapro/waha-plus:latest nginx:alpine
+#   docker save nooviai/noovichat:latest ankane/pgvector:v0.7.0 redis:7-alpine devlikeapro/waha-plus:latest nginx:alpine | gzip > noovichat-images.tar.gz
+#
+# No servidor airgap:
+#   docker load < noovichat-images.tar.gz
+# ----

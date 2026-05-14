@@ -1,0 +1,30 @@
+name: Check Links
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # toda segunda-feira às 8h
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links in Markdown files
+        uses: lycheeverse/lychee-action@v1
+        with:
+          args: |
+            --verbose
+            --no-progress
+            --exclude "localhost"
+            --exclude "127.0.0.1"
+            --exclude "sua-instancia"
+            --exclude "example.com"
+            --exclude "noovichat.com/app"
+            '**/*.md'
+          fail: false    # não falhar o CI por links externos quebrados — apenas reportar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,77 @@
+{
+  "name": "NooviChat — Qualificação BANT via Captain AI",
+  "description": "Quando formulário é preenchido: cria contato + conversa no NooviChat e inicia qualificação BANT via Captain AI Assistant.",
+  "nodes": [
+    {
+      "id": "webhook-lead",
+      "name": "Webhook — Novo lead do formulário",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "noovichat-new-lead",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson"
+      },
+      "position": [0, 200]
+    },
+    {
+      "id": "format-contact",
+      "name": "Formatar dados do contato",
+      "type": "n8n-nodes-base.set",
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "phone", "value": "={{ $json.phone.replace(/\\D/g, '').startsWith('55') ? '+' + $json.phone.replace(/\\D/g, '') : '+55' + $json.phone.replace(/\\D/g, '') }}" },
+            { "name": "name", "value": "={{ $json.name }}" },
+            { "name": "email", "value": "={{ $json.email }}" },
+            { "name": "source", "value": "={{ $json.utm_source || 'formulario' }}" }
+          ]
+        }
+      },
+      "position": [200, 200]
+    },
+    {
+      "id": "noovichat-create-contact",
+      "name": "NooviChat — Criar/atualizar contato",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "operation": "upsert",
+        "resource": "contact",
+        "name": "={{ $json.name }}",
+        "phone_number": "={{ $json.phone }}",
+        "email": "={{ $json.email }}",
+        "custom_attributes": {
+          "fonte_do_lead": "={{ $json.source }}"
+        }
+      },
+      "position": [400, 200]
+    },
+    {
+      "id": "noovichat-create-conversation",
+      "name": "NooviChat — Criar conversa",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "operation": "create",
+        "resource": "conversation",
+        "contactId": "={{ $json.id }}",
+        "inboxId": "={{ $env.NOOVICHAT_INBOX_ID }}",
+        "message": "Olá {{ $('Formatar dados do contato').item.json.name.split(' ')[0] }}! 👋\n\nVi que você se interessou pelo NooviChat. Posso te fazer algumas perguntas rápidas para entender melhor como podemos te ajudar?\n\n*1. Qual o tamanho do seu time de atendimento?*\nA) Só eu mesmo\nB) 2-5 pessoas\nC) 6-20 pessoas\nD) Mais de 20",
+        "labels": ["novo-lead", "qualificacao-bant"]
+      },
+      "position": [600, 200]
+    }
+  ],
+  "connections": {
+    "Webhook — Novo lead do formulário": { "main": [[ {"node": "Formatar dados do contato", "type": "main", "index": 0} ]] },
+    "Formatar dados do contato": { "main": [[ {"node": "NooviChat — Criar/atualizar contato", "type": "main", "index": 0} ]] },
+    "NooviChat — Criar/atualizar contato": { "main": [[ {"node": "NooviChat — Criar conversa", "type": "main", "index": 0} ]] }
+  },
+  "settings": {
+    "timezone": "America/Sao_Paulo"
+  },
+  "_meta": {
+    "author": "NooviChat",
+    "version": "1.0",
+    "env_required": ["NOOVICHAT_INBOX_ID"],
+    "docs": "https://github.com/Noovi-AI/noovichat-resources/blob/main/docs/tutorials/automacoes-n8n-essenciais.md"
+  }
+}

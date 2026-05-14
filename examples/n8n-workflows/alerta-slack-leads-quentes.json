@@ -1,0 +1,101 @@
+{
+  "name": "NooviChat — Alerta Slack leads quentes (score >= 75)",
+  "description": "Notifica o canal de vendas no Slack quando um lead atinge score >= 75, incluindo link direto para a conversa.",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Webhook — Score de contato atualizado",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "noovichat-lead-score",
+        "responseMode": "onReceived"
+      },
+      "position": [0, 200]
+    },
+    {
+      "id": "filter-hot-lead",
+      "name": "Filtrar — score >= 75 (novo threshold)",
+      "type": "n8n-nodes-base.filter",
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "value1": "={{ $json.data.new_score }}",
+              "operation": "largerEqual",
+              "value2": 75
+            },
+            {
+              "value1": "={{ $json.data.previous_score }}",
+              "operation": "smallerEqual",
+              "value2": 74
+            }
+          ]
+        }
+      },
+      "position": [200, 200]
+    },
+    {
+      "id": "noovichat-get-contact",
+      "name": "NooviChat — Buscar detalhes do contato",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "resource": "contact",
+        "operation": "get",
+        "contactId": "={{ $json.data.contact_id }}"
+      },
+      "position": [400, 200]
+    },
+    {
+      "id": "noovichat-get-conversation",
+      "name": "NooviChat — Buscar última conversa",
+      "type": "@nooviai/n8n-nodes-noovichat.noovichat",
+      "parameters": {
+        "resource": "conversation",
+        "operation": "getAll",
+        "contactId": "={{ $json.id }}",
+        "limit": 1,
+        "sort": "created_at:desc"
+      },
+      "position": [600, 200]
+    },
+    {
+      "id": "slack-notify",
+      "name": "Slack — Notificar canal de vendas",
+      "type": "n8n-nodes-base.slack",
+      "parameters": {
+        "channel": "={{ $env.SLACK_CHANNEL_VENDAS || '#vendas' }}",
+        "text": "🔥 *Novo lead quente no NooviChat!*",
+        "otherOptions": {
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "🔥 *Novo lead quente!*\n\n*{{ $('NooviChat — Buscar detalhes do contato').item.json.name }}*\n📊 Score: *{{ $('Webhook — Score de contato atualizado').item.json.data.new_score }} pts*\n🏢 Empresa: {{ $('NooviChat — Buscar detalhes do contato').item.json.company || 'Não informado' }}\n📞 Telefone: {{ $('NooviChat — Buscar detalhes do contato').item.json.phone_number }}"
+              },
+              "accessory": {
+                "type": "button",
+                "text": { "type": "plain_text", "text": "Ver conversa" },
+                "url": "={{ $env.NOOVICHAT_URL }}/app/accounts/{{ $('Webhook — Score de contato atualizado').item.json.data.account_id }}/conversations/{{ $json[0].id }}"
+              }
+            }
+          ]
+        }
+      },
+      "position": [800, 200]
+    }
+  ],
+  "connections": {
+    "Webhook — Score de contato atualizado": { "main": [[ {"node": "Filtrar — score >= 75 (novo threshold)", "type": "main", "index": 0} ]] },
+    "Filtrar — score >= 75 (novo threshold)": { "main": [[ {"node": "NooviChat — Buscar detalhes do contato", "type": "main", "index": 0} ]] },
+    "NooviChat — Buscar detalhes do contato": { "main": [[ {"node": "NooviChat — Buscar última conversa", "type": "main", "index": 0} ]] },
+    "NooviChat — Buscar última conversa": { "main": [[ {"node": "Slack — Notificar canal de vendas", "type": "main", "index": 0} ]] }
+  },
+  "_meta": {
+    "author": "NooviChat",
+    "version": "1.0",
+    "env_required": ["NOOVICHAT_URL", "SLACK_CHANNEL_VENDAS"],
+    "threshold": "Altere o valor 75 no nó 'Filtrar' para ajustar o threshold de lead quente",
+    "docs": "https://github.com/Noovi-AI/noovichat-resources/blob/main/docs/features/lead-scoring.md"
+  }
+}
