@@ -115,7 +115,7 @@ Requisitos mínimos:
 
 ## Planos
 
-Todas as licenças entregam as **25 features completas** — sem feature gating.
+Todas as licenças entregam as **26 features completas** — sem feature gating.
 
 | Plano | Duração | Preço | Limite VPS | WAHA Plus via Noovi |
 |---|---|---|---|---|
